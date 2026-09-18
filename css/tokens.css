@@ -1,0 +1,108 @@
+/* Thresherium — design tokens, forked from Soulstice.
+   Sources: ~/dev/design-system-docs/tokens/tokens.json,
+            ~/.claude/skills/sinaida-grid-style/reference/grid-law.md */
+
+@font-face {
+  font-family: "Geist Pixel";
+  src: url("../fonts/GeistPixel.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Libre Franklin";
+  src: url("../fonts/LibreFranklin-Light.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Libre Franklin";
+  src: url("../fonts/LibreFranklin-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Libre Franklin";
+  src: url("../fonts/LibreFranklin-SemiBold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Palette — the whole allowed set, no others. */
+  --void: #050505;
+  --chalk: #f6f6f6;
+  --red: #cd0000;
+  --red-legible: #ff1a1a;
+  --graphite: #262626;
+  --gunmetal: #4d4d4d;
+  --slate: #737373;
+  --fog: #999999;
+  --haze: #cccccc;
+  --cathode: #a7bebe;
+
+  /* Two faces: Geist Pixel for display, Libre Franklin for reading text. */
+  --font-display: "Geist Pixel", ui-monospace, Menlo, monospace;
+  --font-body: "Libre Franklin", "Helvetica Neue", Arial, sans-serif;
+
+  /* Type scale — one system. Ratios from the 17px reading size:
+     small 0.82x · body 1x · question 1.29x · title 2.12x. */
+  --fs-body: 1.0625rem;   /* ~17px reading size */
+  --fs-small: 0.875rem;   /* ~14px — pixel labels / meta, kept legible */
+  --fs-h3: 1.1875rem;     /* ~19px — smallest heading, still above body */
+  --fs-q: 1.375rem;       /* ~22px — card question */
+  --fs-h2: 1.375rem;      /* ~22px — document / page section head */
+  --fs-h1: 1.75rem;       /* ~28px — document / page title */
+  --fs-title: 2.25rem;    /* ~36px — mode-select title */
+
+  --unit: 1.55;           /* body line-height */
+  --tracking: 0.01em;     /* barely-there body tracking */
+  --step: 1.375rem;       /* one grid row at body size */
+  --gutter: 2.75rem;
+  --rule-w: 1px;
+
+  /* Left/right inset that lines the header and footer text up with the card
+     text in the framed column. Sum of everything between the frame's outer
+     edge and a panel's text: frame border + frame padding + panel margin +
+     panel padding. Keep in step with .frame and #screen > * in app.css. */
+  --chrome-inset: calc(
+    var(--rule-w) + 0.5rem + clamp(0.5rem, 1.6vw, 1.1rem) + var(--step) * 1.4
+  );
+
+  /* Reading column. ~46rem holds the measure near 66-72 characters at the
+     Libre Franklin advance width — wide enough that the framed column does
+     not read as a thin ribbon on a large display. */
+  --column: 46rem;
+
+  /* ---- Full view: void ground, galaxy + CRT behind opaque cards. */
+  --ground: var(--void);
+  --surface: #0c0c0c;              /* opaque card ground; every text block sits on this */
+  --ink: var(--chalk);
+  --ink-soft: var(--fog);
+  --rule: var(--red);
+  --field-border: var(--graphite);
+  --field-bg: #0d0d0d;
+  --red-text: var(--red-legible);  /* small red text needs the legible variant on the dark card */
+  --btn-ink: var(--chalk);
+  --btn-bg: var(--red);
+  --btn-disabled-bg: var(--graphite);
+  --btn-disabled-ink: var(--slate);
+}
+
+:root[data-view="full"] {
+  --ground: var(--void);
+  --surface: #0c0c0c;
+  --ink: var(--chalk);
+  --ink-soft: var(--fog);
+  --field-border: var(--graphite);
+  --field-bg: #0d0d0d;
+  --red-text: var(--red-legible);
+  --btn-disabled-bg: var(--graphite);
+  --btn-disabled-ink: var(--slate);
+}

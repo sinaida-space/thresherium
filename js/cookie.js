@@ -1,0 +1,126 @@
+// Thresherium — cookie notice and the one stored choice.
+//
+// localStorage["thresherium:v1:cookie"] = {"choice":"accept"|"reject","at":ms,"policyVersion":1}
+//
+// Reject still lets the visitor use the tool: the choice itself is not written
+// to storage in that case beyond this one record, and no consent record is
+// written until the visitor also agrees on the welcome screen. Nothing here
+// reads textContent or innerText; the choice is a variable captured at click
+// time, never text read back from the page (Google Translate safety).
+
+import { el } from "./dom.js";
+
+const COOKIE_KEY = "thresherium:v1:cookie";
+const POLICY_VERSION = 1;
+
+let bar = null;
+
+function lsGet(key) {
+  try {
+    return window.localStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
+}
+
+function lsSet(key, value) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (e) {
+    /* choice will not persist; the bar just reappears next visit */
+  }
+}
+
+export function cookieChoice() {
+  try {
+    const raw = lsGet(COOKIE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && (parsed.choice === "accept" || parsed.choice === "reject")) {
+      return parsed.choice;
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function writeChoice(choice) {
+  lsSet(
+    COOKIE_KEY,
+    JSON.stringify({ choice: choice, at: Date.now(), policyVersion: POLICY_VERSION })
+  );
+}
+
+function buildBar(onChoice) {
+  const root = el("aside", {
+    class: "cookienotice",
+    role: "region",
+    "aria-label": "Storage notice",
+    "data-role": "cookie-notice"
+  });
+
+  const text = el("div", { class: "cookienotice__text" });
+  text.appendChild(el("p", { class: "cookienotice__h" }, "One thing stored"));
+  text.appendChild(
+    el(
+      "p",
+      { class: "cookienotice__p" },
+      "This site sets no cookies and runs no analytics. If you allow it, your browser keeps one line so you do not see the welcome twice. Reject and nothing is written."
+    )
+  );
+  root.appendChild(text);
+
+  const actions = el("div", { class: "cookienotice__actions" });
+
+  // Reject first in DOM order, so it leads on a mobile stack.
+  const reject = el(
+    "button",
+    { class: "btn btn--ghost", type: "button", "data-action": "cookie-reject" },
+    "Reject"
+  );
+  reject.addEventListener("click", function () {
+    writeChoice("reject");
+    onChoice("reject");
+  });
+
+  const allow = el(
+    "button",
+    { class: "btn", type: "button", "data-action": "cookie-allow" },
+    "Allow"
+  );
+  allow.addEventListener("click", function () {
+    writeChoice("accept");
+    onChoice("accept");
+  });
+
+  actions.appendChild(reject);
+  actions.appendChild(allow);
+  root.appendChild(actions);
+
+  return root;
+}
+
+function removeBar() {
+  if (bar && bar.parentNode) bar.parentNode.removeChild(bar);
+  bar = null;
+}
+
+function showBar() {
+  if (bar) return;
+  bar = buildBar(function () {
+    removeBar();
+  });
+  document.body.appendChild(bar);
+}
+
+// Shown until a choice exists. "Storage settings" in the footer calls this
+// again to reopen it, regardless of any earlier choice.
+export function initCookieNotice() {
+  if (!cookieChoice()) showBar();
+}
+
+export function reopenCookieNotice() {
+  removeBar();
+  showBar();
+}
