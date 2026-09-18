@@ -16,7 +16,7 @@ import { session } from "./session.js";
 import { renderStep, destroyStep } from "./steps.js";
 import { announce } from "./fx.js";
 
-const ENERGY_KEYS = { energyBefore: "energyBefore", energyAfter: "energyAfter" };
+const ENERGY_KEYS = { energyBefore: "energyBefore", energyNow: "energyNow", energyAfter: "energyAfter" };
 
 let current = null; // { node } of the mounted step, for teardown
 
@@ -81,6 +81,18 @@ export function runFlow(flow, opts) {
   const onEnd = (opts && opts.onEnd) || function () {};
   stopFlow();
   session.flowId = flow.id;
+
+  // A restarted flow starts clean: drop the log of its abandoned run, give
+  // back the scores it added and forget its answers.
+  session.log = session.log.filter(function (entry) {
+    if (entry.flowId !== flow.id) return true;
+    const step = flow.steps[entry.stepId];
+    if (step) {
+      addScores(entry.score || scoreFor(step, entry.pick), -1);
+      dropAnswer(step);
+    }
+    return false;
+  });
 
   // Back only steps within this flow: the previous step is the last log
   // entry, and only if that entry belongs to this flow.
