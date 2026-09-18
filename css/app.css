@@ -342,7 +342,7 @@ h1, h2, h3,
 }
 .field:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-color: var(--red); }
 .field:disabled { color: var(--ink-soft); }
-.field::placeholder { color: var(--slate); }
+.field::placeholder { color: var(--fog); } /* 6.9:1 on the field; slate fails AA */
 
 .listadd { display: flex; gap: 0.6rem; align-items: flex-start; }
 .listadd .field { flex: 1 1 auto; margin: 0; }
