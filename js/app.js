@@ -1,7 +1,7 @@
 // Thresherium — app shell and router.
 //
-// Hash routes: #/ (arrival), #/menu/:route, #/flow/:id, #/commit, #/plan,
-// #/exit, plus the open pages #/welcome, #/privacy, #/about, #/404.
+// Hash routes: #/ (arrival), #/menu/:route, #/flow/:id, #/energy, #/commit,
+// #/plan, #/exit, plus the open pages #/welcome, #/privacy, #/about, #/404.
 //
 // Consent gate: every route except welcome, privacy, about and 404 needs a
 // valid consent record. Without one, the visitor is sent to #/welcome.
@@ -17,7 +17,7 @@ import { initCookieNotice } from "./cookie.js";
 import { initBackdrop } from "./backdrop.js";
 import { session, reset } from "./engine/session.js";
 import { stopFlow } from "./engine/runner.js";
-import { runFlowById, pickerFor, exitScreen, flows } from "./engine/route.js";
+import { runFlowById, pickerFor, energyScreen, exitScreen, flows } from "./engine/route.js";
 import { renderPlan } from "./engine/plan.js";
 
 const OPEN_ROUTES = ["welcome", "privacy", "about", "404"];
@@ -50,6 +50,7 @@ function engine(route, parts) {
   if (needsSession()) return true;
   if (route === "menu") return pickerFor(parts[1], parts[2]);
   if (route === "flow") return runFlowById(parts[1]);
+  if (route === "energy") return energyScreen();
   if (route === "commit") return runFlowById(flows.commit.id);
   if (route === "plan") return mountScreen(renderPlan());
   return false;

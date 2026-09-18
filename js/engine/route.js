@@ -5,7 +5,7 @@
 //
 // Pure decisions (decideRoute, hasExitFlag, methodsFor, findFlow, hashAfter)
 // are exported for tools/smoke.mjs and never touch the DOM. The screen
-// builders (pickerFor, afterPractice, exitScreen) return DOM nodes or set
+// builders (pickerFor, energyScreen, exitScreen) return DOM nodes or set
 // window.location.hash.
 
 import { el } from "../dom.js";
@@ -67,7 +67,8 @@ export function hashAfter(kind, route) {
     if (route === "flooded") return "#/flow/" + flows.triage.id;
     return "#/menu/" + route;
   }
-  if (kind === "practice") return "#/menu/after";
+  if (kind === "practice") return "#/energy";
+  if (kind === "energy") return "#/menu/after";
   if (kind === "triage" || kind === "method") return "#/commit";
   if (kind === "commit") return "#/plan";
   return "#/";
@@ -92,12 +93,13 @@ export function afterCommit() {
   window.location.hash = hashAfter("commit");
 }
 
-// A practice ends with one energy rating, then the small menu.
-export function afterPractice() {
+// #/energy: one energy rating after a practice, then the small menu.
+export function energyScreen() {
   setMood("arrive");
   runFlow(flowFromStep(energyNow, "energy-now", "Energy"), {
-    onEnd: function () { window.location.hash = hashAfter("practice"); }
+    onEnd: function () { window.location.hash = hashAfter("energy"); }
   });
+  return true;
 }
 
 // Runs any flow by id and wires its end to the router.
@@ -112,7 +114,7 @@ export function runFlowById(id) {
   runFlow(flow, {
     onEnd: function () {
       if (flow.kind === "arrival") afterArrival();
-      else if (flow.kind === "practice") afterPractice();
+      else if (flow.kind === "practice") window.location.hash = hashAfter("practice");
       else if (flow.kind === "triage") afterTriage();
       else if (flow.kind === "method") afterMethod();
       else if (flow.kind === "commit") afterCommit();
