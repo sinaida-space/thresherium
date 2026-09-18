@@ -37,6 +37,9 @@ export function readConsent() {
       parsed.policyVersion === POLICY_VERSION &&
       typeof parsed.agreedAt === "number"
     ) {
+      // Kept in memory too, so a later Reject (which clears storage) does
+      // not throw the visitor out of a running session.
+      memoryConsent = parsed;
       return parsed;
     }
     return null;
