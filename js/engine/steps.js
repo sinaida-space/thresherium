@@ -13,7 +13,7 @@
 import { el, setText, clear } from "../dom.js";
 import { mountBreath } from "../breath.js";
 import { buttons } from "../../data/copy.js";
-import { setBreath, cue, announce } from "./fx.js";
+import { cue, announce } from "./fx.js";
 
 const teardowns = new WeakMap();
 
@@ -339,18 +339,10 @@ function renderTimer(step, ctx) {
   const cueNode = el("p", { class: "timer__cue", "aria-live": "polite" });
   root.appendChild(cueNode);
 
-  const controls = el("div", { class: "timer__controls" });
-  const pauseBtn = el("button", { class: "btn btn--ghost", type: "button", "aria-pressed": "false" }, buttons.pause);
-  const skipBtn = el("button", { class: "btn btn--ghost", type: "button" }, buttons.skip);
-  controls.appendChild(pauseBtn);
-  controls.appendChild(skipBtn);
-  root.appendChild(controls);
-
   const total = Math.max(1, step.seconds | 0);
   const cues = Array.isArray(step.cues) ? step.cues : [];
   let cueIndex = -1;
   let done = false;
-  let paused = false;
 
   // Cues are spaced evenly across the whole exercise.
   function cueAt(elapsed) {
@@ -362,80 +354,75 @@ function renderTimer(step, ctx) {
     }
   }
 
-  function finish(completed) {
+  let stopAll = function () {};
+
+  function finish(completed, playCue) {
     if (done) return;
     done = true;
     stopAll();
-    if (completed) cue("done");
+    if (completed && playCue) cue("done");
     ctx.onAnswer({ completed: completed, seconds: total });
   }
 
-  let stopAll = function () {};
-  let setPaused = function () {};
-
   if (step.pattern) {
-    // Breath orb from js/breath.js. Elapsed time for the cues is kept here
-    // from the tick stream, so the orb stays in charge of the phases.
-    let elapsed = 0;
-    let lastTick = 0;
-    let lastPhase = "";
+    // Breath orb from js/breath.js. It owns the phases, the galaxy breath,
+    // the in/out/done cues, the live phase text and its own Pause and Skip
+    // buttons. onTick(tick) reports { phase, t, elapsed, remaining }; only
+    // the evenly spaced cues are kept here.
+    let remaining = total;
     const ctl = mountBreath(stage, step, {
-      onTick: function (phase, t) {
-        const now = performance.now();
-        if (lastTick) elapsed += (now - lastTick) / 1000;
-        lastTick = now;
-        setBreath(phase, t);
-        cueAt(elapsed);
-        if (phase !== lastPhase) {
-          lastPhase = phase;
-          announce(phase);
-          if (phase === "inhale") cue("in");
-          else if (phase === "exhale") cue("out");
-        }
+      onTick: function (tick) {
+        remaining = tick.remaining;
+        cueAt(tick.elapsed);
       },
-      onDone: function () { finish(true); }
+      // Skip and natural end both land here; the remaining time tells them apart.
+      onDone: function () { finish(remaining <= 0, false); }
     });
-    stopAll = function () { if (ctl && ctl.stop) ctl.stop(); setBreath("rest", 0); };
-    setPaused = function (p) {
-      if (p) { if (ctl.pause) ctl.pause(); lastTick = 0; }
-      else if (ctl.resume) ctl.resume();
-    };
+    stopAll = function () { if (ctl && ctl.stop) ctl.stop(); };
+    cueAt(0);
   } else {
-    // Plain countdown with the instruction and cues.
+    // Plain countdown with the instruction, cues, Pause and Skip.
     const digits = el("p", { class: "timer__digits num" }, fmt(total));
     stage.appendChild(digits);
+
+    const controls = el("div", { class: "timer__controls" });
+    const pauseBtn = el("button", { class: "btn btn--ghost", type: "button", "aria-pressed": "false" }, buttons.pause);
+    const skipBtn = el("button", { class: "btn btn--ghost", type: "button" }, buttons.skip);
+    controls.appendChild(pauseBtn);
+    controls.appendChild(skipBtn);
+    root.appendChild(controls);
+
     let elapsed = 0;
     let last = 0;
     let timer = 0;
+    let paused = false;
     function tick() {
       const now = performance.now();
       elapsed += (now - last) / 1000;
       last = now;
       setText(digits, fmt(total - elapsed));
       cueAt(elapsed);
-      if (elapsed >= total) finish(true);
+      if (elapsed >= total) finish(true, true);
     }
     function start() {
       last = performance.now();
       timer = setInterval(tick, 200);
     }
     stopAll = function () { clearInterval(timer); };
-    setPaused = function (p) {
+
+    pauseBtn.addEventListener("click", function () {
+      paused = !paused;
+      pauseBtn.setAttribute("aria-pressed", paused ? "true" : "false");
+      setText(pauseBtn, paused ? buttons.resume : buttons.pause);
       clearInterval(timer);
-      if (!p) start();
-    };
+      if (!paused) start();
+      announce(paused ? buttons.pause : buttons.resume);
+    });
+    skipBtn.addEventListener("click", function () { finish(false, false); });
+
     cueAt(0);
     start();
   }
-
-  pauseBtn.addEventListener("click", function () {
-    paused = !paused;
-    pauseBtn.setAttribute("aria-pressed", paused ? "true" : "false");
-    setText(pauseBtn, paused ? buttons.resume : buttons.pause);
-    setPaused(paused);
-    announce(paused ? buttons.pause : buttons.resume);
-  });
-  skipBtn.addEventListener("click", function () { finish(false); });
 
   teardowns.set(root, function () { done = true; stopAll(); });
   return root;
