@@ -382,8 +382,11 @@ function renderTimer(step, ctx) {
     cueAt(0);
   } else {
     // Plain countdown with the instruction, cues, Pause and Skip.
-    const digits = el("p", { class: "timer__digits num" }, fmt(total));
+    // aria-hidden: #screen is a live region, and the digits change every
+    // second; #engine-status announces phase and cue changes instead.
+    const digits = el("p", { class: "timer__digits num", "aria-hidden": "true" }, fmt(total));
     stage.appendChild(digits);
+    let shown = fmt(total);
 
     const controls = el("div", { class: "timer__controls" });
     const pauseBtn = el("button", { class: "btn btn--ghost", type: "button", "aria-pressed": "false" }, buttons.pause);
@@ -396,11 +399,16 @@ function renderTimer(step, ctx) {
     let last = 0;
     let timer = 0;
     let paused = false;
+    let autoPaused = false; // paused by a hidden tab, resumed when it shows
     function tick() {
       const now = performance.now();
       elapsed += (now - last) / 1000;
       last = now;
-      setText(digits, fmt(total - elapsed));
+      const text = fmt(total - elapsed);
+      if (text !== shown) {
+        shown = text;
+        setText(digits, text);
+      }
       cueAt(elapsed);
       if (elapsed >= total) finish(true, true);
     }
@@ -408,14 +416,35 @@ function renderTimer(step, ctx) {
       last = performance.now();
       timer = setInterval(tick, 200);
     }
-    stopAll = function () { clearInterval(timer); };
-
-    pauseBtn.addEventListener("click", function () {
-      paused = !paused;
+    function setPaused(p) {
+      paused = p;
       pauseBtn.setAttribute("aria-pressed", paused ? "true" : "false");
       setText(pauseBtn, paused ? buttons.resume : buttons.pause);
       clearInterval(timer);
       if (!paused) start();
+    }
+    // Same as the breath orb: a hidden tab pauses the countdown, so the cues
+    // are not skipped while the visitor is away.
+    function onVisibility() {
+      if (document.hidden) {
+        if (!paused && !done) {
+          autoPaused = true;
+          setPaused(true);
+        }
+      } else if (autoPaused) {
+        autoPaused = false;
+        setPaused(false);
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    stopAll = function () {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+
+    pauseBtn.addEventListener("click", function () {
+      autoPaused = false;
+      setPaused(!paused);
       announce(paused ? buttons.pause : buttons.resume);
     });
     skipBtn.addEventListener("click", function () { finish(false, false); });
