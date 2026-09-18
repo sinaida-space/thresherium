@@ -59,9 +59,10 @@ export function renderHeader() {
       setText(sound, on ? "Sound on" : "Sound off");
     });
   });
-  nav.appendChild(sound);
-
   root.appendChild(nav);
+  // Outside the nav landmark, after it in DOM order: on wide screens it ends
+  // the row, on phones it shares the first row with the wordmark.
+  root.appendChild(sound);
 
   return root;
 }

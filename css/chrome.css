@@ -106,6 +106,23 @@
     padding-left: calc(2.1rem + var(--rule-w));
     padding-right: calc(2.1rem + var(--rule-w));
   }
+  /* Phones: the header scrolls away with the page and packs into two rows:
+     wordmark and sound toggle first, the nav links below. */
+  .siteheader { position: static; }
+  .siteheader__inner {
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+    gap: 0 1rem;
+  }
+  .siteheader__mark { order: 1; }
+  .audio-toggle { order: 2; }
+  .siteheader__nav {
+    order: 3;
+    flex: 1 1 100%;
+    gap: 0 0.9rem;
+    justify-content: flex-start;
+  }
+  .audio-toggle { padding: 0.2rem 0.5rem; }
 }
 
 /* ---- footer ------------------------------------------------------------- */
@@ -175,6 +192,16 @@
 
 @media (min-width: 601px) {
   .cookienotice__actions { flex-direction: row; }
+}
+
+/* Phones: the notice sits in normal flow above the content (its DOM place is
+   before .frame), so it never overlaps the Begin button. */
+@media (max-width: 600px) {
+  .cookienotice {
+    position: static;
+    border-top: none;
+    border-bottom: var(--rule-w) solid var(--rule);
+  }
 }
 
 .cookienotice__actions .btn {

@@ -107,6 +107,9 @@ function buildBar(onChoice) {
   );
   allow.addEventListener("click", function () {
     writeChoice("accept");
+    // welcome.js listens: a consent held in memory (given while the choice
+    // was reject or unmade) is persisted now that storage is allowed.
+    document.dispatchEvent(new CustomEvent("thresherium:storage-allowed"));
     onChoice("accept");
   });
 
@@ -122,12 +125,16 @@ function removeBar() {
   bar = null;
 }
 
+// The bar sits before .frame in the DOM: fixed to the bottom on wide screens,
+// in normal flow above the content on phones, so it never covers Begin.
 function showBar() {
   if (bar) return;
   bar = buildBar(function () {
     removeBar();
   });
-  document.body.appendChild(bar);
+  const frame = document.querySelector(".frame");
+  if (frame && frame.parentNode) frame.parentNode.insertBefore(bar, frame);
+  else document.body.appendChild(bar);
 }
 
 // Shown until a choice exists. "Storage settings" in the footer calls this
