@@ -55,7 +55,8 @@ check("hashAfter: every kind lands somewhere", () => {
   assert.equal(route.hashAfter("arrival", "flooded"), "#/flow/" + route.flows.triage.id);
   assert.equal(route.hashAfter("arrival", "drained"), "#/menu/drained");
   assert.equal(route.hashAfter("arrival", "dry"), "#/menu/dry");
-  assert.equal(route.hashAfter("practice"), "#/menu/after");
+  assert.equal(route.hashAfter("practice"), "#/energy");
+  assert.equal(route.hashAfter("energy"), "#/menu/after");
   assert.equal(route.hashAfter("triage"), "#/commit");
   assert.equal(route.hashAfter("method"), "#/commit");
   assert.equal(route.hashAfter("commit"), "#/plan");
