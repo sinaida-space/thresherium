@@ -160,3 +160,81 @@ h1, h2, h3,
   font-family: var(--font-body);
   font-weight: 300;
 }
+
+/* ===== breath orb (task 3) ===== */
+
+.breath { text-align: center; }
+
+.orb-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: min(220px, 44vw);
+  margin: var(--step) auto calc(var(--step) * 0.75);
+}
+
+/* The disc: chalk at 12%, one chalk hairline at 40%. No glow, no gradient;
+   the galaxy behind the card is the atmosphere. breath.js sets the scale
+   every frame (0.55..1.0), so there is no CSS transition to fight it. */
+.orb {
+  width: min(220px, 44vw);
+  height: min(220px, 44vw);
+  border-radius: 50%;
+  background: rgba(246, 246, 246, 0.12);
+  border: 1px solid rgba(246, 246, 246, 0.4);
+  transform: scale(0.55);
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+.orb-phase {
+  font-family: var(--font-display);
+  font-size: var(--fs-q);
+  line-height: 1.35;
+  color: var(--ink);
+  margin: 0 0 var(--step);
+}
+.orb-phase__count { color: var(--cathode); }
+
+/* Countdown ring for timers without a pattern. Only stroke-dashoffset moves,
+   set per frame from breath.js; the ring starts at twelve o'clock. */
+.ring {
+  width: min(220px, 44vw);
+  height: min(220px, 44vw);
+  transform: rotate(-90deg);
+  overflow: visible;
+}
+.ring__track,
+.ring__fill { fill: none; stroke-width: 1; }
+.ring__track { stroke: rgba(246, 246, 246, 0.4); }
+.ring__fill { stroke: var(--cathode); }
+
+.ring__count {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-display);
+  font-size: var(--fs-q);
+  color: var(--cathode);
+}
+
+.orb-instruction {
+  max-width: 34rem;
+  margin: 0 auto var(--step);
+}
+
+.orb-cue {
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+  min-height: calc(var(--fs-small) * var(--unit));
+  margin: calc(var(--step) * -0.4) auto var(--step);
+}
+
+.orb-controls {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
