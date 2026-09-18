@@ -2,15 +2,18 @@
 //
 // localStorage["thresherium:v1:cookie"] = {"choice":"accept"|"reject","at":ms,"policyVersion":1}
 //
-// Reject still lets the visitor use the tool: the choice itself is not written
-// to storage in that case beyond this one record, and no consent record is
-// written until the visitor also agrees on the welcome screen. Nothing here
+// Reject still lets the visitor use the tool: nothing is written, any earlier
+// record (this choice and the welcome consent) is removed, and the notice
+// simply shows again on the next visit. Accept writes this one record; the
+// consent record is written only once the visitor also agrees on the welcome
+// screen. Nothing here
 // reads textContent or innerText; the choice is a variable captured at click
 // time, never text read back from the page (Google Translate safety).
 
 import { el } from "./dom.js";
 
 const COOKIE_KEY = "thresherium:v1:cookie";
+const CONSENT_KEY = "thresherium:v1:consent";
 const POLICY_VERSION = 1;
 
 let bar = null;
@@ -45,7 +48,20 @@ export function cookieChoice() {
   }
 }
 
+function lsRemove(key) {
+  try {
+    window.localStorage.removeItem(key);
+  } catch (e) {
+    /* nothing to remove */
+  }
+}
+
 function writeChoice(choice) {
+  if (choice === "reject") {
+    lsRemove(COOKIE_KEY);
+    lsRemove(CONSENT_KEY);
+    return;
+  }
   lsSet(
     COOKIE_KEY,
     JSON.stringify({ choice: choice, at: Date.now(), policyVersion: POLICY_VERSION })
