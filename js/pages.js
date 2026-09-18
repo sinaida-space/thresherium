@@ -39,7 +39,7 @@ export function renderPrivacy() {
   root.appendChild(heading("What is stored"));
   root.appendChild(
     paragraph(
-      "Two things, at most, and only in your own browser: whether you allowed or rejected the storage notice, and, if you allowed it, that you read the welcome screen. Nothing about what you type into the tool itself is stored, sent, or logged anywhere."
+      "Two things, at most, and only in your own browser, and only if you chose Allow on the storage notice: that choice, and that you read the welcome screen. Reject writes nothing. Nothing about what you type into the tool itself is stored, sent, or logged anywhere."
     )
   );
 
