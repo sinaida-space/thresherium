@@ -1,0 +1,49 @@
+/* Thresherium — print. Hides the app chrome and the fixed backdrop; the
+   readable panel prints black on white. */
+
+@media print {
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  #backdrop { display: none !important; }
+
+  .frame {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    background: #ffffff !important;
+    border: 0 !important;
+  }
+
+  #screen > * {
+    background: #ffffff !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .siteheader,
+  .sitefooter,
+  .skip-link,
+  .cookienotice,
+  .noscript {
+    display: none !important;
+  }
+
+  .card__label,
+  .page__h1,
+  .page__h2,
+  h1, h2, h3 {
+    color: #000000 !important;
+    text-shadow: none !important;
+  }
+
+  a[href]::after { content: ""; }
+
+  .screen { padding: 0; }
+
+  @page { margin: 20mm; }
+}

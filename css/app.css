@@ -1,0 +1,162 @@
+/* Thresherium — layout and components, forked from Soulstice.
+   Grid law: full-height red rules frame the reading column;
+   blocks hold to the vertical rhythm; negative space sits between blocks. */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { background: var(--ground); }
+
+/* Line-breaking hygiene: keep last lines from ending on a single word, and
+   balance short headings. A browser hint, not a guarantee. */
+p, li, blockquote { text-wrap: pretty; }
+h1, h2, h3, .welcome__h, .page__h1, .page__h2 { text-wrap: balance; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 300;
+  font-size: var(--fs-body);
+  line-height: var(--unit);
+  letter-spacing: var(--tracking);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Full view: let the fixed #backdrop canvas show through the page body and the
+   frame. Every readable block sits on an opaque .screen-panel card; header and
+   footer are their own opaque bands. The galaxy shows in the margins around
+   each panel, never behind readable text. */
+:root[data-view="full"] body { background: transparent; }
+
+/* ---- Frame: two full-height red vertical rules around the column ---- */
+
+.frame {
+  width: 100%;
+  max-width: var(--column);
+  margin: 0 auto;
+  padding: 0 0.5rem;
+  border-left: var(--rule-w) solid var(--rule);
+  border-right: var(--rule-w) solid var(--rule);
+  /* Grow to fill the viewport so the red rules run full height and the footer
+     is always pushed to the bottom, however short the page. */
+  flex: 1 0 auto;
+}
+
+.screen {
+  padding: calc(var(--step) * 2) 0;
+}
+
+/* ---- The panel: every screen's readable content sits on this opaque card,
+   with the backdrop showing in the margin on all four sides. ---- */
+
+#screen > * {
+  background: var(--surface);
+  border: var(--rule-w) solid #565656;
+  padding: calc(var(--step) * 1.5) calc(var(--step) * 1.4);
+  margin: 0 clamp(0.5rem, 1.6vw, 1.1rem) calc(var(--step) * 1.25);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.55);
+}
+#screen > *:last-child { margin-bottom: 0; }
+
+/* The panel takes programmatic focus on every route change so screen-reader and
+   keyboard users land on the new screen. It is not an interactive control, so it
+   shows no focus ring of its own; the real controls inside it keep their own
+   :focus-visible outlines. */
+#screen:focus,
+#screen:focus-visible,
+#screen > *:focus,
+#screen > *:focus-visible { outline: none; }
+
+@media (max-width: 560px) {
+  #screen > * {
+    margin-inline: 0.5rem;
+    padding: calc(var(--step) * 1.2) 1.1rem;
+  }
+}
+
+/* ---- Shared display bits ---- */
+
+h1, h2, h3,
+.card__label,
+.card__q,
+.chip {
+  font-family: var(--font-display);
+  font-weight: 400;
+}
+
+.card__label {
+  display: block;
+  font-size: var(--fs-small);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--red-text);
+  margin-bottom: var(--step);
+}
+
+.card__q {
+  font-size: var(--fs-q);
+  line-height: 1.35;
+  margin: 0 0 var(--step);
+  color: var(--ink);
+}
+
+.card__note {
+  font-size: var(--fs-small);
+  color: var(--ink-soft);
+  margin: calc(var(--step) * -0.4) 0 var(--step);
+}
+
+/* ---- Numerals: display face everywhere they appear in running text ---- */
+
+.num { font-family: var(--font-display); }
+
+/* ---- Buttons ---- */
+
+.btn {
+  font-family: var(--font-display);
+  font-size: var(--fs-small);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--btn-ink);
+  background: var(--btn-bg);
+  border: none;
+  padding: 0.7rem 1.4rem;
+  cursor: pointer;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn:disabled { background: var(--btn-disabled-bg); color: var(--btn-disabled-ink); cursor: not-allowed; filter: none; }
+.btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.btn--block { display: block; width: 100%; margin-top: var(--step); text-align: center; }
+
+.btn--ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border: var(--rule-w) solid var(--field-border);
+}
+.btn--ghost:hover { color: var(--ink); border-color: var(--ink-soft); }
+
+.btn:disabled:hover { filter: none; }
+
+/* ---- Panels ---- */
+
+.screen-panel { display: block; }
+
+/* ---- Accessibility niceties ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+.noscript {
+  max-width: var(--column);
+  margin: 4rem auto;
+  padding: 0 var(--gutter);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 300;
+}
