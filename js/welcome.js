@@ -62,6 +62,17 @@ function writeConsent() {
   }
 }
 
+// Allow chosen after Begin: the consent given in the meantime is persisted,
+// so the next visit skips the welcome as the notice promised.
+document.addEventListener("thresherium:storage-allowed", function () {
+  if (!memoryConsent) return;
+  try {
+    window.localStorage.setItem(CONSENT_KEY, JSON.stringify(memoryConsent));
+  } catch (e) {
+    /* storage blocked: the in-memory record stays */
+  }
+});
+
 function paragraph(text) {
   return el("p", { class: "welcome__p" }, text);
 }
