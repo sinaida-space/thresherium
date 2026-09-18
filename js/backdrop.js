@@ -1,10 +1,17 @@
-// Soulstice — fixed galaxy + CRT/VHS backdrop.
+// Thresherium — fixed galaxy + CRT/VHS backdrop, forked from Soulstice.
 //
 // One <canvas id="backdrop">, position:fixed, below all content, inserted once
 // from app.js boot. A drifting parallax starfield (spirit of sinaida.eu) with a
 // CRT/VHS overlay on top (scanlines, vignette, chromatic fringe, low-frequency
 // flicker/roll, faint noise). All readable text sits on opaque cards, so the
 // backdrop is allowed to be clearly present.
+//
+// Thresherium adds three things on top of the Soulstice machinery:
+//   - a slow spiral drift of the whole field around the viewport centre
+//   - a mood system (setMood): arrive / breathe / think / plan, each a set of
+//     render parameters, cross-faded over 1.2 s in the render loop
+//   - a breath state (setBreath): the star field scales 1.00 -> 1.06 with the
+//     inhale and back with the exhale; the nebula lifts 10% at the peak
 //
 // State comes only from data-view / data-motion on <html> (set by chrome.js)
 // and from prefers-reduced-motion — attributes and .matches, never text.
@@ -31,8 +38,10 @@ let stars = [];
 let nebula = [];
 let pal = { ground: "#050505", star: "#f6f6f6", red: "#cd0000" };
 let spriteWhite = null;
+let spriteCool = null; // chalk mixed 15% toward cathode, for the "breathe" mood
 let spriteRed = null;
 let vignette = null;
+let vignetteTight = null; // "think" mood pulls the corners in
 let scanPattern = null;
 let noiseTiles = [];
 
@@ -51,6 +60,100 @@ const reduceMQ =
 
 const DRIFT_X = -3.4; // px per second at the nearest depth
 const DRIFT_Y = 1.1;
+// Spiral drift: each star also turns around the viewport centre, nearer stars
+// faster, and creeps outward a little. Wrapping at the edges keeps the field
+// full; a whole-canvas rotate would bare the corners within a minute.
+const SPIRAL_W = 0.006; // radians per second at the nearest depth
+const SPIRAL_OUT = 0.4; // px per second outward at the nearest depth
+
+// ---- mood + breath state -----------------------------------------------------
+// Each mood is a flat set of render parameters. The loop lerps `moodCur` from
+// `moodFrom` toward `moodTo` over MOOD_MS with an ease-in-out, so a mood change
+// never jumps, even when it lands in the middle of a previous transition.
+//   neb    nebula alpha multiplier
+//   speed  drift multiplier (0 = still)
+//   temp   0..1 mix toward the cathode-tinted star sprite (1 = the 15% mix)
+//   tight  0..1 blend of the tighter vignette on top of the normal one
+//   twk    twinkle amplitude (smaller = sharper, steadier stars)
+//   bright star alpha multiplier
+const MOODS = {
+  arrive: { neb: 1.0, speed: 1.0, temp: 0, tight: 0, twk: 0.28, bright: 1.0 },
+  breathe: { neb: 0.6, speed: 0.5, temp: 1, tight: 0, twk: 0.2, bright: 1.0 },
+  think: { neb: 1.0, speed: 0.0, temp: 0, tight: 1, twk: 0.08, bright: 1.05 },
+  plan: { neb: 1.1, speed: 0.35, temp: 0, tight: 0, twk: 0.24, bright: 1.18 }
+};
+const MOOD_KEYS = ["neb", "speed", "temp", "tight", "twk", "bright"];
+const MOOD_MS = 1200;
+
+let moodName = "arrive";
+let moodFrom = Object.assign({}, MOODS.arrive);
+let moodTo = MOODS.arrive;
+let moodCur = Object.assign({}, MOODS.arrive);
+let moodT0 = 0; // performance.now() when the last setMood() landed
+
+// Breath: the target scale is a pure function of (phase, t). The loop eases
+// `breathCur` toward it so a late or dropped frame never shows as a jump.
+const BREATH_MAX = 1.06;
+let breathTarget = 1.0;
+let breathCur = 1.0;
+let breathPhase = "rest";
+let breathT = 0;
+
+function easeInOut(p) {
+  return p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+}
+
+function tickMood(nowMs) {
+  let p = (nowMs - moodT0) / MOOD_MS;
+  if (p >= 1) {
+    for (let i = 0; i < MOOD_KEYS.length; i++) moodCur[MOOD_KEYS[i]] = moodTo[MOOD_KEYS[i]];
+    return;
+  }
+  if (p < 0) p = 0;
+  const e = easeInOut(p);
+  for (let i = 0; i < MOOD_KEYS.length; i++) {
+    const k = MOOD_KEYS[i];
+    moodCur[k] = moodFrom[k] + (moodTo[k] - moodFrom[k]) * e;
+  }
+}
+
+function tickBreath(dt) {
+  // ~120 ms time constant: tracks the per-frame target closely, hides jitter
+  const k = Math.min(1, dt * 8);
+  breathCur += (breathTarget - breathCur) * k;
+}
+
+export function setMood(m) {
+  if (!MOODS[m]) return;
+  moodName = m;
+  if (!ctx || motionReduced()) {
+    // no loop to lerp in: land on the target and repaint once
+    moodFrom = Object.assign({}, MOODS[m]);
+    moodTo = MOODS[m];
+    moodCur = Object.assign({}, MOODS[m]);
+    moodT0 = 0;
+    if (ctx && viewMode() !== "light" && !document.hidden) renderStatic();
+    return;
+  }
+  tickMood(performance.now()); // settle `moodCur` before capturing it
+  moodFrom = Object.assign({}, moodCur);
+  moodTo = MOODS[m];
+  moodT0 = performance.now();
+}
+
+export function setBreath(phase, t) {
+  if (t == null || t !== t) t = 0;
+  if (t < 0) t = 0;
+  else if (t > 1) t = 1;
+  breathPhase = phase;
+  breathT = t;
+  const span = BREATH_MAX - 1;
+  if (phase === "inhale") breathTarget = 1 + span * t;
+  else if (phase === "hold") breathTarget = BREATH_MAX;
+  else if (phase === "exhale") breathTarget = BREATH_MAX - span * t;
+  else breathTarget = 1; // "rest" or anything unknown
+  // Reduced motion: the field stays put; the orb and its text carry the phase.
+}
 
 // ---- state reads -------------------------------------------------------------
 
@@ -108,6 +211,8 @@ function makeSprite(rgb) {
 
 function buildSprites() {
   spriteWhite = makeSprite("245,246,248");
+  // chalk (245,246,248) mixed 15% toward cathode #a7bebe (167,190,190)
+  spriteCool = makeSprite("233,238,239");
   spriteRed = makeSprite("235,60,60");
 }
 
@@ -185,6 +290,13 @@ function buildVignette() {
   g.addColorStop(0.65, "rgba(0,0,0,0.18)");
   g.addColorStop(1, "rgba(0,0,0,0.6)");
   vignette = g;
+
+  // the "think" vignette: starts closer to the centre, ends darker
+  const t = ctx.createRadialGradient(cx, cy, inner * 0.7, cx, cy, outer * 0.85);
+  t.addColorStop(0, "rgba(0,0,0,0)");
+  t.addColorStop(0.6, "rgba(0,0,0,0.22)");
+  t.addColorStop(1, "rgba(0,0,0,0.55)");
+  vignetteTight = t;
 }
 
 function buildScan() {
@@ -233,45 +345,75 @@ function drawGalaxy(tSec, dt, animate) {
   ctx.fillStyle = "rgba(22,26,40,0.6)";
   ctx.fillRect(0, 0, W, H);
 
-  // nebula wash
+  const m = moodCur;
+  // breath: 0 at rest, 1 at the top of the inhale
+  const peak = (breathCur - 1) / (BREATH_MAX - 1);
+
+  // nebula wash — dimmed by the mood, lifted 10% at the breath peak
+  ctx.globalAlpha = Math.min(1, m.neb * (1 + 0.1 * peak));
   for (let i = 0; i < nebula.length; i++) {
     ctx.fillStyle = nebula[i];
     ctx.fillRect(0, 0, W, H);
   }
+  ctx.globalAlpha = 1;
+
+  // The whole star field breathes: one scale about the centre. The stars'
+  // own positions keep wrapping in unscaled space, so nothing accumulates.
+  const scaled = Math.abs(breathCur - 1) > 0.0005;
+  if (scaled) {
+    ctx.save();
+    ctx.translate(W / 2, H / 2);
+    ctx.scale(breathCur, breathCur);
+    ctx.translate(-W / 2, -H / 2);
+  }
+  const cx = W / 2;
+  const cy = H / 2;
+
+  const temp = m.temp;
+  // the bright-star core follows the same 15% cathode mix as the sprite
+  const coolCore =
+    "rgb(" + Math.round(255 - 13 * temp) + "," + Math.round(255 - 10 * temp) + "," + Math.round(255 - 10 * temp) + ")";
 
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
-    if (animate && dt > 0) {
-      s.x += DRIFT_X * s.z * dt;
-      s.y += DRIFT_Y * s.z * dt;
+    if (animate && dt > 0 && m.speed > 0) {
+      const v = m.speed * s.z * dt;
+      const rx = s.x - cx;
+      const ry = s.y - cy;
+      const rl = Math.sqrt(rx * rx + ry * ry) || 1;
+      // linear parallax drift + tangential turn + a slow outward creep
+      s.x += DRIFT_X * v - ry * SPIRAL_W * v + (rx / rl) * SPIRAL_OUT * v;
+      s.y += DRIFT_Y * v + rx * SPIRAL_W * v + (ry / rl) * SPIRAL_OUT * v;
       if (s.x < -4) s.x += W + 8;
       else if (s.x > W + 4) s.x -= W + 8;
       if (s.y < -4) s.y += H + 8;
       else if (s.y > H + 4) s.y -= H + 8;
     }
 
-    let alpha = s.a;
-    if (animate) alpha *= 0.72 + 0.28 * Math.sin(s.tw + tSec * s.ts);
+    let alpha = s.a * m.bright;
+    if (animate) alpha *= 1 - m.twk + m.twk * Math.sin(s.tw + tSec * s.ts);
     if (alpha < 0) alpha = 0;
     else if (alpha > 1) alpha = 1;
 
-    const sprite = s.warm ? spriteRed : spriteWhite;
     const d = s.size * 2;
 
-    if (s.bright) {
-      // soft glow halo, then the core
-      ctx.globalAlpha = alpha * 0.28;
-      const gd = s.size * 5.2;
-      ctx.drawImage(sprite, s.x - gd, s.y - gd, gd * 2, gd * 2);
+    if (s.warm) {
+      drawStar(spriteRed, s, d, alpha, 1);
+    } else if (temp <= 0) {
+      drawStar(spriteWhite, s, d, alpha, 1);
+    } else if (temp >= 1) {
+      drawStar(spriteCool, s, d, alpha, 1);
+    } else {
+      // mid-transition only: cross-fade the two sprites
+      drawStar(spriteWhite, s, d, alpha, 1 - temp);
+      drawStar(spriteCool, s, d, alpha, temp);
     }
-    ctx.globalAlpha = alpha;
-    ctx.drawImage(sprite, s.x - d, s.y - d, d * 2, d * 2);
 
     if (s.bright) {
       // a crisp white centre so the brightest stars actually peak near white,
       // even after the CRT overlay knocks the whole frame down a little
       ctx.globalAlpha = Math.min(1, alpha + 0.15);
-      ctx.fillStyle = s.warm ? "rgb(255,150,150)" : "rgb(255,255,255)";
+      ctx.fillStyle = s.warm ? "rgb(255,150,150)" : coolCore;
       const cr = Math.max(1.6, s.size * 0.5);
       ctx.beginPath();
       ctx.arc(s.x, s.y, cr, 0, 6.283185);
@@ -281,6 +423,18 @@ function drawGalaxy(tSec, dt, animate) {
     }
   }
   ctx.globalAlpha = 1;
+  if (scaled) ctx.restore();
+}
+
+// halo (bright stars only) then the core, at `alpha * mix`
+function drawStar(sprite, s, d, alpha, mix) {
+  if (s.bright) {
+    ctx.globalAlpha = alpha * 0.28 * mix;
+    const gd = s.size * 5.2;
+    ctx.drawImage(sprite, s.x - gd, s.y - gd, gd * 2, gd * 2);
+  }
+  ctx.globalAlpha = alpha * mix;
+  ctx.drawImage(sprite, s.x - d, s.y - d, d * 2, d * 2);
 }
 
 function drawCRT(tSec, animate) {
@@ -305,10 +459,16 @@ function drawCRT(tSec, animate) {
     ctx.fillRect(0, 0, W, H);
   }
 
-  // vignette
+  // vignette, plus the tighter one blended in for the "think" mood
   if (vignette) {
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, W, H);
+  }
+  if (vignetteTight && moodCur.tight > 0) {
+    ctx.globalAlpha = moodCur.tight;
+    ctx.fillStyle = vignetteTight;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
   }
 
   // faint noise
@@ -351,6 +511,9 @@ function render(tSec, dt, animate) {
 }
 
 function renderStatic() {
+  // no loop to lerp in: land every parameter, then paint one frame
+  tickMood(Infinity);
+  breathCur = 1;
   render(0, 0, false);
 }
 
@@ -363,6 +526,8 @@ function frame(now) {
   if (dt > 0.1) dt = 0.1; // tab was busy — clamp, do not let the watchdog misfire
   lastT = t;
 
+  tickMood(now);
+  tickBreath(dt);
   render(t, dt, true);
 
   const ms = dt * 1000;
@@ -479,4 +644,18 @@ export function initBackdrop() {
 
   if (reduceMQ.addEventListener) reduceMQ.addEventListener("change", apply);
   else if (reduceMQ.addListener) reduceMQ.addListener(apply);
+
+  // ?debug in the URL exposes the live state for manual checks; never in prod
+  if (/(^|[?&])debug(=|&|$)/.test(window.location.search)) {
+    window.__backdrop = {
+      setMood: setMood,
+      setBreath: setBreath,
+      get mood() { return moodName; },
+      get cur() { return Object.assign({}, moodCur); },
+      get breath() { return { phase: breathPhase, t: breathT, scale: breathCur }; },
+      get stars() { return stars.length; },
+      get running() { return running; },
+      get degraded() { return sessionDegraded; }
+    };
+  }
 }

@@ -5,8 +5,9 @@
 // Google-Translate safety: every control keys off element references and
 // data-* attributes captured at render time, never off text nodes.
 
-import { el } from "./dom.js";
+import { el, setText } from "./dom.js";
 import { reopenCookieNotice } from "./cookie.js";
+import { audio } from "./audio.js";
 
 export function renderHeader() {
   const root = el("div", { class: "siteheader__inner" });
@@ -39,19 +40,26 @@ export function renderHeader() {
   });
   nav.appendChild(storage);
 
-  // Sound is off until a later milestone wires actual playback; the control
-  // exists now so its position and state do not shift later.
-  const audio = el(
+  // Sound: generated ambient, off by default. The AudioContext may only be
+  // created and resumed inside this click, so audio.toggle() runs here and
+  // the button reflects whatever state it returns.
+  const sound = el(
     "button",
     {
       class: "audio-toggle",
       type: "button",
       id: "audio-toggle",
-      "aria-pressed": "false"
+      "aria-pressed": audio.enabled ? "true" : "false"
     },
-    "Sound off"
+    audio.enabled ? "Sound on" : "Sound off"
   );
-  nav.appendChild(audio);
+  sound.addEventListener("click", function () {
+    audio.toggle().then(function (on) {
+      sound.setAttribute("aria-pressed", on ? "true" : "false");
+      setText(sound, on ? "Sound on" : "Sound off");
+    });
+  });
+  nav.appendChild(sound);
 
   root.appendChild(nav);
 

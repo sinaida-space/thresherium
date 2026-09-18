@@ -1,7 +1,9 @@
-/* Soulstice — the fixed galaxy + CRT canvas.
+/* Thresherium — the fixed galaxy + CRT canvas, forked from Soulstice.
    backdrop.js inserts <canvas id="backdrop"> once at boot; this file only
-   places it. All drawing, pausing and the Full / Light / reduce-effects
-   reactions live in backdrop.js, keyed off data-view / data-motion on <html>. */
+   places it: fixed, below .frame (z-index -1 against the transparent body),
+   hidden in print. All drawing, moods, breath scaling, pausing and the
+   Full / Light / reduce-effects reactions live in backdrop.js, keyed off
+   data-view / data-motion on <html>. */
 
 #backdrop {
   position: fixed;
