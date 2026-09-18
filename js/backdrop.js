@@ -49,6 +49,8 @@ let rafId = 0;
 let running = false;
 let lastT = 0;
 let slowSince = 0;
+let frameSamples = []; // first 60 frame times (ms), for the display's own cadence
+let slowLimit = 24; // ms; raised once the cadence is known (30 Hz displays deliver 33 ms)
 let sessionDegraded = false; // latched: stay on the static render for the session
 
 let resizeTimer = 0;
@@ -531,7 +533,16 @@ function frame(now) {
   render(t, dt, true);
 
   const ms = dt * 1000;
-  if (ms > 24) {
+  // Learn the display's cadence from the first 60 frames: a frame counts as
+  // slow only past 24 ms and past 2.2 times the median, so a healthy 30 Hz
+  // display is not latched to the static render.
+  if (frameSamples.length < 60) {
+    frameSamples.push(ms);
+    if (frameSamples.length === 60) {
+      const sorted = frameSamples.slice().sort(function (a, b) { return a - b; });
+      slowLimit = Math.max(24, 2.2 * sorted[30]);
+    }
+  } else if (ms > slowLimit) {
     if (!slowSince) slowSince = now;
     else if (now - slowSince > 1000) {
       sessionDegraded = true;
