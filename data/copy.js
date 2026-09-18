@@ -47,6 +47,7 @@ export const plan = {
 	energy: {
 		label: "Energy",
 		before: "before",
+		now: "now",
 		after: "after",
 		same: "no change"
 	},

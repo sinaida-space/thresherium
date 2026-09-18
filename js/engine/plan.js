@@ -25,22 +25,23 @@ function dateLine() {
   }
 }
 
+// before → now → after; "now" is the rating taken right after a practice
+// and appears only when it exists.
 function energyBlock() {
   const before = session.energyBefore;
+  const now = session.energyNow;
   const after = session.energyAfter;
-  if (!before && !after) return null;
+  if (!before && !now && !after) return null;
   const p = el("p", { class: "plan__energy" });
   p.appendChild(el("span", { class: "chip chip--soft" }, copy.energy.label));
   p.appendChild(document.createTextNode(" "));
-  if (before) {
-    p.appendChild(el("span", { class: "num" }, String(before)));
-    p.appendChild(document.createTextNode(" " + copy.energy.before));
-  }
-  if (before && after) p.appendChild(document.createTextNode(" → "));
-  if (after) {
-    p.appendChild(el("span", { class: "num" }, String(after)));
-    p.appendChild(document.createTextNode(" " + copy.energy.after));
-  }
+  const parts = [[before, copy.energy.before], [now, copy.energy.now], [after, copy.energy.after]]
+    .filter(function (x) { return x[0]; });
+  parts.forEach(function (x, i) {
+    if (i > 0) p.appendChild(document.createTextNode(" → "));
+    p.appendChild(el("span", { class: "num" }, String(x[0])));
+    p.appendChild(document.createTextNode(" " + x[1]));
+  });
   if (before && after) {
     const delta = after - before;
     const txt = delta === 0 ? copy.energy.same : (delta > 0 ? "+" : "−") + Math.abs(delta);

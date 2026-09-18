@@ -7,6 +7,7 @@
 export const session = {
   scores: { drained: 0, flooded: 0, dry: 0 },
   energyBefore: null,
+  energyNow: null,
   energyAfter: null,
   route: null,
   flowId: null,
@@ -18,6 +19,7 @@ export const session = {
 export function reset() {
   session.scores = { drained: 0, flooded: 0, dry: 0 };
   session.energyBefore = null;
+  session.energyNow = null;
   session.energyAfter = null;
   session.route = null;
   session.flowId = null;
