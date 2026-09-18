@@ -1,6 +1,7 @@
 // Thresherium — app shell and router.
 //
-// Hash routes: #/ (placeholder "Arrival"), #/welcome, #/privacy, #/about, #/404
+// Hash routes: #/ (arrival), #/menu/:route, #/flow/:id, #/commit, #/plan,
+// #/exit, plus the open pages #/welcome, #/privacy, #/about, #/404.
 //
 // Consent gate: every route except welcome, privacy, about and 404 needs a
 // valid consent record. Without one, the visitor is sent to #/welcome.
@@ -8,13 +9,16 @@
 // Google-Translate safety: routing reads only data-* attributes and values
 // captured by reference. Nothing here reads textContent/innerText.
 
-import { el } from "./dom.js";
 import { mountScreen } from "./screen.js";
 import { renderWelcome, readConsent } from "./welcome.js";
 import { renderPrivacy, renderAbout, renderNotFound } from "./pages.js";
 import { renderHeader, renderFooter } from "./chrome.js";
 import { initCookieNotice } from "./cookie.js";
 import { initBackdrop } from "./backdrop.js";
+import { session, reset } from "./engine/session.js";
+import { stopFlow } from "./engine/runner.js";
+import { runFlowById, pickerFor, exitScreen, flows } from "./engine/route.js";
+import { renderPlan } from "./engine/plan.js";
 
 const OPEN_ROUTES = ["welcome", "privacy", "about", "404"];
 
@@ -25,20 +29,30 @@ function paintChrome() {
   if (footer) footer.replaceChildren(renderFooter());
 }
 
-// Placeholder landing screen. A later task replaces this with the real
-// Arrival flow; the export name is the stub other tasks build against.
+// Arrival: the session starts clean here, so a return to #/ never adds a
+// second run's scores on top of the first.
 export function mountArrival() {
-  const root = el("section", { class: "screen-panel", "data-role": "arrival" });
-  root.appendChild(el("span", { class: "card__label" }, "Arrival"));
-  root.appendChild(el("h1", { class: "card__q" }, "The instrument is not built yet."));
-  root.appendChild(
-    el(
-      "p",
-      { class: "card__note" },
-      "Its shell, its consent gate and its storage notice already exist. A later milestone fills this screen."
-    )
-  );
-  mountScreen(root);
+  reset();
+  runFlowById(flows.arrival.id);
+}
+
+// Engine screens other than arrival need a route decided in this page load.
+// After a reload the session is empty, so they fall back to #/.
+function needsSession() {
+  if (session.route) return false;
+  window.location.hash = "#/";
+  return true;
+}
+
+// Returns false only for an unknown route, so the caller can show the 404.
+function engine(route, parts) {
+  if (route === "exit") return mountScreen(exitScreen());
+  if (needsSession()) return true;
+  if (route === "menu") return pickerFor(parts[1], parts[2]);
+  if (route === "flow") return runFlowById(parts[1]);
+  if (route === "commit") return runFlowById(flows.commit.id);
+  if (route === "plan") return mountScreen(renderPlan());
+  return false;
 }
 
 function router() {
@@ -47,6 +61,7 @@ function router() {
   const route = parts[0] || "";
 
   paintChrome();
+  stopFlow();
 
   if (route === "welcome") return mountScreen(renderWelcome());
   if (route === "privacy") return mountScreen(renderPrivacy());
@@ -59,6 +74,7 @@ function router() {
   }
 
   if (!route) return mountArrival();
+  if (engine(route, parts) !== false) return;
 
   // Unknown route: render the styled 404 view in place, no silent redirect.
   return mountScreen(renderNotFound());
