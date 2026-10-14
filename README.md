@@ -101,6 +101,19 @@ line recording that you did. Reject it and nothing is written; the notice
 simply shows again next time. The sound is synthesised in the browser;
 there are no audio files. See `#/privacy` for the full policy.
 
+## Support & handoff
+
+- Status: active (maintained by Sinaida Krivchenko)
+- Run locally: `python3 -m http.server 4174`, then open http://localhost:4174/ (no build step)
+- Requirements: served over HTTP, since ES modules do not load from file://
+- Handing over: the flows are in data/; check them with tools/validate.mjs
+- Licences: LICENSE for the code, and fonts/OFL-LibreFranklin.txt for the font
+- Contact: https://sinaida.eu/collaborate
+
+## How this was made
+
+Sinaida comes up with the idea, the concept and the way to make it into a system. The making uses whatever the piece needs, from drawing by hand to AI-native production. She cares about integrity and a smooth experience, so every work adjusts to its environment, and each project ships with a rider, a contingency plan and her support.
+
 ## Licence
 
 Code: Apache License 2.0, see `LICENSE`. Text and prose content, every
