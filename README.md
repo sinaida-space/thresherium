@@ -6,8 +6,6 @@ questions place you on three scales, drained, flooded or dry, and hand
 you the matching next step. Ten minutes, one printable plan, and nothing
 leaves the page.
 
-> Production mirror. Development and issue tracking run in a private development environment; releases are published here.
-
 **Live:** <https://sinaida-space.github.io/thresherium/>
 
 ## Run it locally
