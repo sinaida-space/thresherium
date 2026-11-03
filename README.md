@@ -107,7 +107,7 @@ there are no audio files. See `#/privacy` for the full policy.
 - Run locally: `python3 -m http.server 4174`, then open http://localhost:4174/ (no build step)
 - Requirements: served over HTTP, since ES modules do not load from file://
 - Handing over: the flows are in data/; check them with tools/validate.mjs
-- Licences: LICENSE for the code, and fonts/OFL-GeistPixel.txt and fonts/OFL-LibreFranklin.txt for the fonts
+- Licences: LICENSE for the code, LICENSE-ARTWORK for the text, and fonts/OFL-GeistPixel.txt and fonts/OFL-LibreFranklin.txt for the fonts
 - Contact: https://sinaida.eu/collaborate
 
 ## How this was made
@@ -117,6 +117,6 @@ Sinaida comes up with the idea, the concept and the way to make it into a system
 ## Licence
 
 Code: Apache License 2.0, see `LICENSE`. Text and prose content, every
-flow under `data/` included: CC BY-NC-ND 4.0. Fonts: Geist Pixel (Vercel)
+flow under `data/` included: CC BY-NC-ND 4.0, see `LICENSE-ARTWORK`. Fonts: Geist Pixel (Vercel)
 and Libre Franklin (Impallari Type), both under the SIL Open Font
 License 1.1, see `fonts/OFL-GeistPixel.txt` and `fonts/OFL-LibreFranklin.txt` for the licence texts.
